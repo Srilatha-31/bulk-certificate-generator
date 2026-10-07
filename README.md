@@ -64,6 +64,16 @@ Returns job information including:
 * Job status
 * Certificate details
 
+## design decisions
+
+Certificate template: one predefined ReportLab template is used for every certificate.
+
+Processing: bulk generation is synchronous.
+
+Failure handling: each recipient is processed independently, so one failure doesn't stop the remaining recipients.
+
+Database: SQLite is used as the relational database for this assignment.
+
 ### Get Certificate Details
 
 GET /api/certificates/<id>/
@@ -78,7 +88,7 @@ Downloads the generated certificate PDF.
 
 ## Validation and Error Handling
 
-The application handles:
+## The application handles:
 
 * Missing CSV file
 * Invalid file type
@@ -95,36 +105,35 @@ Failed records are stored with an error message while successful records continu
 
 Clone the repository:
 
-git clone <your-github-repository-url>
+git clone https://github.com/Srilatha-31/bulk-certificate-generator
 cd bulk_certificate_generator
 
 
-Create a virtual environment:
+## Create a virtual environment:
 
 python -m venv env
 
 
-Activate the virtual environment on Windows:
+## Activate the virtual environment on Windows:
 
 env\Scripts\activate
 
 
-Install the required dependencies:
+## Install the required dependencies:
 
 pip install -r requirements.txt
 
 
-Run database migrations:
+## Run database migrations:
 
 python manage.py migrate
 
-
-Start the development server:
+## Start the development server:
 
 python manage.py runserver
 
 
-The API will be available at:
+## The API will be available at:
 
 http://127.0.0.1:8000/
 

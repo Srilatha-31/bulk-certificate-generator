@@ -12,19 +12,16 @@ def generate_certificate_pdf(certificate):
     pdf = canvas.Canvas(buffer, pagesize=(842, 595))
     pdf.setTitle("Certificate of Achievement")
 
-    # =========================
+    
     # PREDEFINED CERTIFICATE TEMPLATE
-    # =========================
-
-    # Outer border
     pdf.setLineWidth(3)
     pdf.rect(30, 30, 782, 535)
 
-    # Inner border
+    
     pdf.setLineWidth(1)
     pdf.rect(45, 45, 752, 535 - 30)
 
-    # Title
+    
     pdf.setFont("Helvetica-Bold", 30)
     pdf.drawCentredString(
         421,
@@ -32,7 +29,7 @@ def generate_certificate_pdf(certificate):
         "CERTIFICATE OF ACHIEVEMENT"
     )
 
-    # Subtitle
+
     pdf.setFont("Helvetica", 15)
     pdf.drawCentredString(
         421,
@@ -40,7 +37,7 @@ def generate_certificate_pdf(certificate):
         "This certificate is proudly presented to"
     )
 
-    # Recipient name
+
     pdf.setFont("Helvetica-Bold", 26)
     pdf.drawCentredString(
         421,
@@ -48,11 +45,10 @@ def generate_certificate_pdf(certificate):
         certificate.recipient_name
     )
 
-    # Decorative line below name
+    
     pdf.setLineWidth(1)
     pdf.line(220, 345, 622, 345)
 
-    # Certificate ID
     pdf.setFont("Helvetica", 12)
     pdf.drawCentredString(
         421,
@@ -60,7 +56,6 @@ def generate_certificate_pdf(certificate):
         f"Certificate ID: {certificate.certificate_id}"
     )
 
-    # Congratulations
     pdf.setFont("Helvetica", 14)
     pdf.drawCentredString(
         421,
@@ -68,7 +63,7 @@ def generate_certificate_pdf(certificate):
         "Congratulations!"
     )
 
-    # Footer
+    
     pdf.setFont("Helvetica", 10)
     pdf.drawCentredString(
         421,
@@ -93,6 +88,7 @@ def process_csv_file(job, file):
         job.status = "failed"
         job.save()
         return job
+
     reader = csv.DictReader(decoded_file)
     rows = list(reader)
 
@@ -113,14 +109,21 @@ def process_csv_file(job, file):
         job.save()
         return job
 
+    if len(rows) == 0:
+        job.status = "failed"
+        job.save()
+        return job
+
     total = 0
     successful = 0
     failed = 0
+
     job.total_certificates = len(rows)
-    if len(rows)==0:
-        job.status="failed"
-        job.save()
-        return job
+    job.processed_certificates = 0
+    job.successful_certificates = 0
+    job.failed_certificates = 0
+    job.progress = 0
+    job.status = "processing"
     job.save()
 
     for row in rows:
@@ -128,6 +131,8 @@ def process_csv_file(job, file):
 
         recipient_name = row.get("recipient_name", "").strip()
         recipient_email = row.get("recipient_email", "").strip()
+
+        certificate = None
 
         try:
             if not recipient_name:
@@ -157,20 +162,25 @@ def process_csv_file(job, file):
         except Exception as e:
             failed += 1
 
-            Certificate.objects.create(
-                job=job,
-                recipient_name=recipient_name,
-                recipient_email=recipient_email,
-                certificate_id=str(uuid.uuid4()),
-                status="failed",
-                error_message=str(e),
-            )
+            if certificate:
+                certificate.status = "failed"
+                certificate.error_message = str(e)
+                certificate.save()
+            else:
+                Certificate.objects.create(
+                    job=job,
+                    recipient_name=recipient_name,
+                    recipient_email=recipient_email,
+                    certificate_id=str(uuid.uuid4()),
+                    status="failed",
+                    error_message=str(e),
+                )
 
-    job.total_certificates=total
-    job.processed_certificates = total
-    job.progress = int((total / len(rows)) * 100)
-    job.successful_certificates = successful
-    job.failed_certificates = failed
+        job.processed_certificates = total
+        job.successful_certificates = successful
+        job.failed_certificates = failed
+        job.progress = int((total / len(rows)) * 100)
+        job.save()
 
     if failed == 0:
         job.status = "completed"
